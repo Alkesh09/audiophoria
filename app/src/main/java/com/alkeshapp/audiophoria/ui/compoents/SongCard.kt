@@ -2,6 +2,7 @@ package com.alkeshapp.audiophoria.ui.compoents
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,24 +31,24 @@ import com.alkeshapp.audiophoria.ui.theme.TabUnselectedColor
 
 
 @Composable
-fun SongCard(modifier: Modifier = Modifier, song: Song) {
+fun SongCard(modifier: Modifier = Modifier, song: Song, onClick: (song: Song)-> Unit) {
     Row(
-        modifier = modifier
+        modifier = modifier.clickable { onClick(song) }
     ) {
 
-        SongSmallCover(coverId = song.cover.orEmpty() )
+        SongSmallCover(coverId = song.cover)
 
         Spacer(modifier = Modifier.width(15.dp))
 
         Column {
             Text(
-                text = song.name.orEmpty(),
+                text = song.name,
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(modifier = Modifier.height(3.dp))
 
             Text(
-                text = song.artist.orEmpty(),
+                text = song.artist,
                 style = MaterialTheme.typography.bodySmall,
                 color = SubTextColor
             )

@@ -1,5 +1,7 @@
 package com.alkeshapp.audiophoria.ui.screens
 
+import android.os.Build
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,6 +25,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -41,11 +45,21 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import coil.ImageLoader
+import coil.compose.rememberAsyncImagePainter
+import coil.decode.GifDecoder
+import coil.decode.ImageDecoderDecoder
+import coil.request.ImageRequest
+import coil.size.Size
 import com.alkeshapp.audiophoria.R
+import com.alkeshapp.audiophoria.domain.models.Song
+import com.alkeshapp.audiophoria.ui.compoents.CustomBottomNavBarItem
+import com.alkeshapp.audiophoria.ui.compoents.SongPlayerView
 import com.alkeshapp.audiophoria.ui.compoents.SongSmallCover
 import com.alkeshapp.audiophoria.ui.theme.SmallPlayerViewBackgroud
 import com.alkeshapp.audiophoria.ui.theme.TabUnselectedColor
 import com.alkeshapp.audiophoria.ui.util.BottomNavigationItems
+import com.alkeshapp.audiophoria.ui.util.PlayerEvents
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -54,6 +68,7 @@ fun HomeScreen() {
 
     val navController = rememberNavController()
 
+    val songListViewModel: SongListViewModel = hiltViewModel()
 //    val pagerState = rememberPagerState(initialPage = 0,initialPageOffsetFraction=0f, pageCount = 3)
 
     var currentDestination by remember {
@@ -64,8 +79,9 @@ fun HomeScreen() {
     Scaffold(bottomBar = {
 
         Column {
-            SongPlayerView()
-
+            if (songListViewModel.isMiniPlayerVisible.value) {
+                SongPlayerView(songListViewModel)
+            }
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -99,8 +115,7 @@ fun HomeScreen() {
             NavHost(navController = navController, startDestination = currentDestination) {
                 composable(BottomNavigationItems.FORYOU.route) {
                     SongListScreen(
-                        navController = navController,
-                        viewModel = hiltViewModel(),
+                        viewModel = songListViewModel,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(vertical = 15.dp, horizontal = 20.dp)
@@ -108,8 +123,7 @@ fun HomeScreen() {
                 }
                 composable(BottomNavigationItems.TOPTRACKS.route) {
                     SongListScreen(
-                        navController = navController,
-                        viewModel = hiltViewModel(),
+                        viewModel = songListViewModel,
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(vertical = 15.dp, horizontal = 20.dp),
@@ -121,83 +135,3 @@ fun HomeScreen() {
     }
 }
 
-@Composable
-fun CustomBottomNavBarItem(
-    bottomNavItem: BottomNavigationItems,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-) {
-    Column(
-        modifier = Modifier
-            .width(120.dp)
-            .clickable(
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() },
-                onClick = onClick
-            ),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = stringResource(id = bottomNavItem.title),
-            style = MaterialTheme.typography.bodyMedium,
-            color = if (isSelected) Color.White else TabUnselectedColor,
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        if (isSelected) {
-            Box(
-                modifier = Modifier
-                    .size(6.dp)
-                    .clip(CircleShape)
-                    .background(color = Color.White)
-            )
-        }
-    }
-}
-
-@Composable
-fun SongPlayerView() {
-    Box(
-        modifier = Modifier
-            .height(64.dp)
-            .background(color = SmallPlayerViewBackgroud)
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .padding(start = 33.dp, end = 20.dp)
-        ) {
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ){
-                SongSmallCover(coverId = "4f718272-6b0e-42ee-92d0-805b783cb471")
-
-                Spacer(modifier = Modifier.width(15.dp))
-
-                Text(
-                    text = "Viva La Vida",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-
-            Image(
-                painter = painterResource(id = R.drawable.play_resume),
-                contentDescription = "pause",
-                contentScale = ContentScale.Crop,
-                modifier = Modifier
-                    .padding(end = 16.dp)
-                    .clip(CircleShape)
-                    .size(35.dp)
-                    .clickable { }
-            )
-
-        }
-    }
-}

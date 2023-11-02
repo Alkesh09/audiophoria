@@ -2,4 +2,5 @@
     <string name="app_name">Audiophoria</string>
     <string name="for_you">For You</string>
     <string name="top_tracks">To Tracks</string>
+    <string name="full_player_view">Song Player</string>
 </resources>

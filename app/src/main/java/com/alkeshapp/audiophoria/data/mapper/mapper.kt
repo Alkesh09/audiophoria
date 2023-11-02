@@ -5,12 +5,12 @@ import com.alkeshapp.audiophoria.domain.models.Song
 
 fun SongDto.toDomainSong(): Song {
     return Song(
-        id = this.id,
-        accent = this.accent,
-        artist = this.artist,
-        cover = this.cover,
-        name = this.name,
-        topTrack = this.topTrack,
-        url = this.url,
+        id = this.id ?: -1,
+        accent = this.accent.orEmpty(),
+        artist = this.artist.orEmpty(),
+        cover = this.cover.orEmpty(),
+        name = this.name.orEmpty(),
+        topTrack = this.topTrack ?: false,
+        url = this.url.orEmpty(),
     )
 }

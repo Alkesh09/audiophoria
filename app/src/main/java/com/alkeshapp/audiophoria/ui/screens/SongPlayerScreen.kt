@@ -1,10 +1,10 @@
 package com.alkeshapp.audiophoria.ui.screens
 
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -24,19 +25,20 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.graphics.ColorList
-import androidx.compose.ui.input.pointer.pointerInput
+
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +53,7 @@ import com.alkeshapp.audiophoria.ui.compoents.SongBigCover
 import com.alkeshapp.audiophoria.ui.theme.SubTextColor
 import com.alkeshapp.audiophoria.ui.util.PlayerEvents
 import com.alkeshapp.audiophoria.ui.viewmodel.SongListViewModel
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 
 @Composable
@@ -78,25 +81,11 @@ fun SongBody(
     colorList: List<Color>,
 ) {
 
-    var xOffset by remember { mutableStateOf(0f) }
 
     Column(
         modifier = modifier
             .background(brush = Brush.verticalGradient(colors = colorList))
-            .pointerInput(Unit) {
-                detectTransformGestures { _, pan, _, _ ->
-                    xOffset += pan.x
-                    val swipeDistance = 100.dp
-
-                    if (pan.x > swipeDistance.toPx()) {
-                        songListViewModel.onPlayerEvents(PlayerEvents.onplayPreviousSong)
-                        xOffset = 0f
-                    } else if (pan.x < -swipeDistance.toPx()) {
-                        songListViewModel.onPlayerEvents(PlayerEvents.onplayNextSong)
-                        xOffset = 0f
-                    }
-                }
-            }) {
+    ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
@@ -131,9 +120,11 @@ fun SongBody(
                 )
             }
 
+
 //            CircularList(
 //                items = songListViewModel.songListState.songs,
-//                currentlyPlayingSong = song
+//                currentlyPlayingSong = song,
+//                songListViewModel = songListViewModel
 //            )
         }
 
@@ -147,31 +138,68 @@ fun CircularList(
     items: List<Song>,
     modifier: Modifier = Modifier,
     currentlyPlayingSong: Song,
+    songListViewModel: SongListViewModel,
 ) {
-    val currentlyPlayingSongIndex = items.indexOf(currentlyPlayingSong)
+    val currentlyPlayingSongIndex =
+        songListViewModel.songListState.songs.indexOf(currentlyPlayingSong)
     val listState = rememberLazyListState(currentlyPlayingSongIndex)
+    var completelyVisibleItem: List<Song>? by remember { mutableStateOf(null) }
+
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress }
+            .distinctUntilChanged()
+            .collect { isScrolling ->
+                if (isScrolling) {
+                    val offset = listState.layoutInfo.viewportStartOffset
+                    val layoutInfo = listState.layoutInfo
+                    val firstVisibleItem = layoutInfo.visibleItemsInfo
+                        .firstOrNull { it.offset >= offset }
+                        ?.index
+
+                    val lastVisibleItem = layoutInfo.visibleItemsInfo
+                        .lastOrNull { it.offset + it.size <= offset + layoutInfo.viewportEndOffset }
+                        ?.index
+
+                    completelyVisibleItem =
+                        if (firstVisibleItem != null && lastVisibleItem != null) {
+                            items.subList(firstVisibleItem, lastVisibleItem + 1)
+                        } else {
+                            null
+                        }
+
+                    if (!completelyVisibleItem.isNullOrEmpty()) {
+                        val getSong = completelyVisibleItem!!.first()
+                        if (getSong != currentlyPlayingSong) {
+                            songListViewModel.onPlayerEvents(PlayerEvents.onPlayNewSong(getSong))
+                        }
+                    }
+                    Log.d("song", "visible item - $completelyVisibleItem")
+                }
+            }
+    }
 
     LazyRow(
         state = listState,
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.Center
+        horizontalArrangement = Arrangement.spacedBy(25.dp),
+        userScrollEnabled = true
     ) {
 
-        items(Int.MAX_VALUE) {
-            val index = it % items.size
-
+        items(songListViewModel.songListState.songs) { song ->
             Column(
                 modifier = Modifier
-                    .width(320.dp)
-                    .padding(10.dp),
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                SongBigCover(coverId = items[index].cover)
+
+                SongBigCover(coverId = song.cover)
 
                 Spacer(modifier = Modifier.height(60.dp))
 
                 Text(
-                    text = items[index].name,
+                    text = song.name,
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight(700),
                     fontSize = 22.sp
@@ -180,15 +208,43 @@ fun CircularList(
                 Spacer(modifier = Modifier.height(5.dp))
 
                 Text(
-                    text = items[index].artist,
+                    text = song.artist,
                     style = MaterialTheme.typography.bodyMedium,
                     color = SubTextColor
                 )
             }
         }
+
+//        items(Int.MAX_VALUE) {
+//            val index = it % items.size
+//
+//            Column(
+//                modifier = Modifier
+//                    .fillMaxWidth(),
+//                horizontalAlignment = Alignment.CenterHorizontally
+//            ) {
+//
+//                SongBigCover(coverId = items[index].cover)
+//
+//                Spacer(modifier = Modifier.height(60.dp))
+//
+//                Text(
+//                    text = items[index].name,
+//                    style = MaterialTheme.typography.bodyLarge,
+//                    fontWeight = FontWeight(700),
+//                    fontSize = 22.sp
+//                )
+//
+//                Spacer(modifier = Modifier.height(5.dp))
+//
+//                Text(
+//                    text = items[index].artist,
+//                    style = MaterialTheme.typography.bodyMedium,
+//                    color = SubTextColor
+//                )
+//            }
+//        }
     }
-
-
 }
 
 @Composable

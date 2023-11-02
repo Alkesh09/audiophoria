@@ -4,6 +4,7 @@ package com.alkeshapp.audiophoria.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -24,8 +25,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +36,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorList
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -74,7 +78,25 @@ fun SongBody(
     colorList: List<Color>,
 ) {
 
-    Column(modifier = modifier.background(brush = Brush.verticalGradient(colors = colorList))) {
+    var xOffset by remember { mutableStateOf(0f) }
+
+    Column(
+        modifier = modifier
+            .background(brush = Brush.verticalGradient(colors = colorList))
+            .pointerInput(Unit) {
+                detectTransformGestures { _, pan, _, _ ->
+                    xOffset += pan.x
+                    val swipeDistance = 100.dp
+
+                    if (pan.x > swipeDistance.toPx()) {
+                        songListViewModel.onPlayerEvents(PlayerEvents.onplayPreviousSong)
+                        xOffset = 0f
+                    } else if (pan.x < -swipeDistance.toPx()) {
+                        songListViewModel.onPlayerEvents(PlayerEvents.onplayNextSong)
+                        xOffset = 0f
+                    }
+                }
+            }) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
@@ -203,7 +225,7 @@ fun SongController(
                 thumbColor = Color.Transparent,
                 activeTrackColor = Color.White,
             ),
-            modifier = Modifier.height(16.dp)
+            modifier = Modifier.height(16.dp),
         )
 
         Row {

@@ -41,7 +41,6 @@ class MusicPlayer @Inject constructor(
     private val viewModelScope: CoroutineScope
 ) : Player.Listener {
 
-    val LOG= "player"
     val mapSongMediaItem = hashMapOf<String, Song>()
     var duration: Long = 0
     lateinit var controller: ListenableFuture<MediaController>
@@ -72,11 +71,9 @@ class MusicPlayer @Inject constructor(
 
     override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
         super.onMediaItemTransition(mediaItem, reason)
-        //reset position
         currentMediaPosition.value = 0f
 
         val song = mapSongMediaItem.get(mediaItem.toString())
-        Log.d(LOG, "Media item changed: " + song)
         if (song != null) {
             currentSong.value.isBackgroundColorEnabled = false
             currentSong.value = song
@@ -100,27 +97,21 @@ class MusicPlayer @Inject constructor(
             mapSongMediaItem.put(mediaItem.toString(), song)
         }
         exoplayer.prepare()
-        Log.d(LOG, "All songs are loaded into the player")
     }
 
     fun performPlayNextSong() {
         exoplayer.seekToNextMediaItem()
-        Log.d(LOG, "Next song initiated")
     }
 
     fun performPlayPreviousSong() {
         exoplayer.seekToPreviousMediaItem()
-        Log.d("player", "Previous song initiated")
     }
 
 
     override fun onPlaybackStateChanged(playbackState: Int) {
         super.onPlaybackStateChanged(playbackState)
-        Log.d(LOG, "OnPlaybackStatechanged called!!")
         when (playbackState) {
-            //The player finished playing all media.
             Player.STATE_ENDED -> {
-                Log.d(LOG, "Player: State Ended")
                 if (exoplayer.hasNextMediaItem()) {
                     if(exoplayer.hasNextMediaItem()) performPlayNextSong()
                 }
@@ -129,22 +120,17 @@ class MusicPlayer @Inject constructor(
                 isPlayerBuffering.value = true
                 currentMediaProgressInMinutes.value = "00:00"
                 currentMediaDurationInMinutes.value = "00:00"
-                Log.d(LOG, "STATE BUFFERING")
             }
             Player.STATE_IDLE -> {
-                Log.d(LOG, "STATE IDLE")
             }
             Player.STATE_READY -> {
                 isPlayerBuffering.value = false
-                Log.d(LOG, "STATE READY")
             }
         }
     }
 
     fun onSeekMusicDone(value: Float) {
-        Log.d(LOG, "onSeekMusicDone value received = $value")
         val longValue = (value * duration).toLong()
-        Log.d(LOG, "Seek to long value: $longValue")
         exoplayer.seekTo(longValue)
     }
 
@@ -164,13 +150,10 @@ class MusicPlayer @Inject constructor(
         currentMediaProgressInMinutes.value = convertDurationLongToTime(pos)
         val progress = pos.toFloat() / duration.toFloat()
         if (!progress.isNaN()) currentMediaPosition.value = progress
-        Log.d(LOG, "Current Progress = " + currentMediaPosition.value)
     }
 
     override fun onPlayerError(error: PlaybackException) {
         super.onPlayerError(error)
-        Log.d(LOG, "Player error: ${error.message}")
-        Log.d(LOG, "Player error: ${error.localizedMessage}")
     }
 
     fun performReleaseInstances() {

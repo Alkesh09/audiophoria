@@ -1,18 +1,29 @@
-package com.alkeshapp.audiophoria.ui.screens
+package com.alkeshapp.audiophoria.ui.viewmodel
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.drawable.Drawable
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
+import androidx.palette.graphics.Palette
 import com.alkeshapp.audiophoria.common.Resultat
 import com.alkeshapp.audiophoria.domain.models.Song
 import com.alkeshapp.audiophoria.domain.usecases.GetSongsUseCase
 import com.alkeshapp.audiophoria.player.MusicPlayer
+import com.alkeshapp.audiophoria.ui.screens.SongListState
+import com.alkeshapp.audiophoria.ui.util.BottomNavigationItems
 import com.alkeshapp.audiophoria.ui.util.PlayerEvents
+import com.bumptech.glide.Glide
+import com.bumptech.glide.RequestManager
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.transition.Transition
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -31,6 +42,13 @@ class SongListViewModel @Inject constructor(
 ) : ViewModel() {
 
     var isMiniPlayerVisible = mutableStateOf(false)
+    var isSheetOpen  = mutableStateOf(false)
+
+    var currentDestination = mutableStateOf(BottomNavigationItems.FORYOU.route)
+
+    private var _gradientColorList =
+        MutableStateFlow(listOf(Color.Black, Color.DarkGray, Color.Gray, Color.Black, Color.Black))
+    val gradientColorList = _gradientColorList.asStateFlow()
 
     private var _currentPlayingSong = MutableStateFlow(Song())
     val currentSongFlow = _currentPlayingSong.asStateFlow()
@@ -53,6 +71,8 @@ class SongListViewModel @Inject constructor(
     var songListState by mutableStateOf(SongListState())
         private set
 
+    private var glideInstance: RequestManager
+
     private val exoplayerInstance: MusicPlayer = MusicPlayer(
         exoplayer = player,
         currentSong = _currentPlayingSong,
@@ -65,6 +85,7 @@ class SongListViewModel @Inject constructor(
     )
 
     init {
+        glideInstance = Glide.with(context)
         player.addListener(exoplayerInstance)
         getSongs()
         exoplayerInstance.setupMediaNotification(context)
@@ -110,7 +131,9 @@ class SongListViewModel @Inject constructor(
                 if (player.hasPreviousMediaItem()) exoplayerInstance.performPlayPreviousSong()
             }
             is PlayerEvents.onChangeColorGradient -> {
-
+                viewModelScope.launch {
+                    getColorPalette(event.url)
+                }
             }
             is PlayerEvents.onseekMusicDone -> exoplayerInstance.onSeekMusicDone(event.value)
 
@@ -121,6 +144,25 @@ class SongListViewModel @Inject constructor(
         exoplayerInstance.performReleaseInstances() //just in case if Hilt is unable to for some unknown reasons
         Log.d("player", "onCleared called!!")
         super.onCleared()
+    }
+
+    fun getColorPalette(url: String) {
+        glideInstance
+            .asBitmap()
+            .load(url)
+            .into(object : CustomTarget<Bitmap>() {
+                override fun onResourceReady(resource: Bitmap, transition: Transition<in Bitmap>?) {
+                    val palette = Palette.from(resource).generate()
+
+                    val color1 = Color(palette.getMutedColor(Color.Black.hashCode()))
+                    val color2 = Color(palette.getVibrantColor(Color.Gray.hashCode()))
+                    val color3 = Color(palette.getDarkMutedColor(Color.Black.hashCode()))
+                    val color4 = Color(palette.getDarkVibrantColor(Color.Black.hashCode()))
+                    _gradientColorList.value = listOf(color1, color2, color3, color4)
+                }
+
+                override fun onLoadCleared(placeholder: Drawable?) = Unit
+            })
     }
 
 }

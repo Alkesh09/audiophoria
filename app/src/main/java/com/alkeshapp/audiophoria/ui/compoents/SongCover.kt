@@ -20,14 +20,31 @@ fun SongSmallCover(
     modifier: Modifier = Modifier,
     coverId: String,
     size: Dp = 40.dp,
-    shape: Shape = CircleShape
-){
+    shape: Shape = CircleShape,
+) {
     GlideImage(
         model = "${Constants.IMAGE_BASE_URL}$coverId",
         contentScale = ContentScale.Crop,
         modifier = modifier
             .size(size)
             .clip(shape = shape),
+        contentDescription = null
+    )
+}
+
+@OptIn(ExperimentalGlideComposeApi::class)
+@Composable
+fun SongBigCover(
+    modifier: Modifier = Modifier,
+    coverId: String,
+    size: Dp = 305.dp,
+) {
+    GlideImage(
+        model = "${Constants.IMAGE_BASE_URL}$coverId",
+        contentScale = ContentScale.Crop,
+        modifier = modifier
+            .size(size)
+            .clip(MaterialTheme.shapes.small),
         contentDescription = null
     )
 }

@@ -35,7 +35,7 @@ import coil.decode.ImageDecoderDecoder
 import coil.request.ImageRequest
 import coil.size.Size
 import com.alkeshapp.audiophoria.R
-import com.alkeshapp.audiophoria.ui.screens.SongListViewModel
+import com.alkeshapp.audiophoria.ui.viewmodel.SongListViewModel
 import com.alkeshapp.audiophoria.ui.theme.SmallPlayerViewBackgroud
 import com.alkeshapp.audiophoria.ui.util.PlayerEvents
 
@@ -43,6 +43,7 @@ import com.alkeshapp.audiophoria.ui.util.PlayerEvents
 @Composable
 fun SongPlayerView(
     songListViewModel: SongListViewModel,
+    onClick: () -> Unit,
 ) {
     val song = songListViewModel.currentSongFlow.collectAsState().value
     val isPlayerBuffering = songListViewModel.isPlayerBuffering.collectAsState().value
@@ -52,6 +53,7 @@ fun SongPlayerView(
         modifier = Modifier
             .height(64.dp)
             .background(color = SmallPlayerViewBackgroud)
+            .clickable { onClick() }
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -77,9 +79,9 @@ fun SongPlayerView(
             }
 
 
-            if(!isPlayerBuffering) {
+            if (!isPlayerBuffering) {
                 Image(
-                    painter = painterResource(id = if (!pausePlay) R.drawable.play_resume else R.drawable.play_pause),
+                    painter = painterResource(id = if (pausePlay) R.drawable.play_resume else R.drawable.play_pause),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
@@ -90,8 +92,14 @@ fun SongPlayerView(
                             songListViewModel.onPlayerEvents(PlayerEvents.onPausePlay)
                         }
                 )
-            }else{
-                GifImage(data = R.drawable.loading)
+            } else {
+                GifImage(
+                    data = R.drawable.loading, modifier = Modifier
+                        .background(color = Color.Transparent)
+                        .padding(end = 16.dp)
+                        .clip(CircleShape)
+                        .size(35.dp)
+                )
             }
 
 
@@ -100,7 +108,7 @@ fun SongPlayerView(
 }
 
 @Composable
-fun GifImage(data: Any?) {
+fun GifImage(data: Any?, modifier: Modifier) {
     val context = LocalContext.current
     val imageLoader = ImageLoader.Builder(context)
         .components {
@@ -120,10 +128,6 @@ fun GifImage(data: Any?) {
             imageLoader = imageLoader,
         ),
         contentDescription = null,
-        modifier = Modifier
-            .background(color = Color.Transparent)
-            .padding(end = 16.dp)
-            .clip(CircleShape)
-            .size(35.dp)
+        modifier = modifier
     )
 }

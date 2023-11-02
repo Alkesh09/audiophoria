@@ -18,16 +18,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
@@ -36,7 +30,6 @@ import androidx.navigation.compose.rememberNavController
 import com.alkeshapp.audiophoria.ui.compoents.CustomBottomNavBarItem
 import com.alkeshapp.audiophoria.ui.compoents.SongPlayerView
 import com.alkeshapp.audiophoria.ui.util.BottomNavigationItems
-import com.alkeshapp.audiophoria.ui.util.Constants
 import com.alkeshapp.audiophoria.ui.viewmodel.SongListViewModel
 
 
@@ -47,8 +40,6 @@ fun HomeScreen() {
     val navController = rememberNavController()
 
     val songListViewModel: SongListViewModel = hiltViewModel()
-//    val pagerState = rememberPagerState(initialPage = 0,initialPageOffsetFraction=0f, pageCount = 3)
-
 
     Scaffold(bottomBar = {
         Column {
@@ -117,6 +108,7 @@ fun HomeScreen() {
 
             val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded= true)
 
+
             if (songListViewModel.isSheetOpen.value) {
                 ModalBottomSheet(
                     onDismissRequest = { songListViewModel.isSheetOpen.value = false },
@@ -124,9 +116,7 @@ fun HomeScreen() {
                     shape = MaterialTheme.shapes.small,
                 ) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .fillMaxHeight()
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         SongPlayerScreen(
                             songListViewModel = songListViewModel,

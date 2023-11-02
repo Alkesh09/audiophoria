@@ -37,7 +37,7 @@ fun SongSmallCover(
 fun SongBigCover(
     modifier: Modifier = Modifier,
     coverId: String,
-    size: Dp = 305.dp,
+    size: Dp = 315.dp,
 ) {
     GlideImage(
         model = "${Constants.IMAGE_BASE_URL}$coverId",

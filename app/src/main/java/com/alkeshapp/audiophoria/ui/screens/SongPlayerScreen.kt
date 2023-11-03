@@ -1,11 +1,12 @@
 package com.alkeshapp.audiophoria.ui.screens
 
 
-import android.util.Log
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,9 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
@@ -27,10 +28,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +38,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
-
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -53,7 +52,9 @@ import com.alkeshapp.audiophoria.ui.compoents.SongBigCover
 import com.alkeshapp.audiophoria.ui.theme.SubTextColor
 import com.alkeshapp.audiophoria.ui.util.PlayerEvents
 import com.alkeshapp.audiophoria.ui.viewmodel.SongListViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
 
 
 @Composable
@@ -73,6 +74,7 @@ fun SongPlayerScreen(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SongBody(
     modifier: Modifier = Modifier,
@@ -80,176 +82,107 @@ fun SongBody(
     song: Song,
     colorList: List<Color>,
 ) {
+    val pagerState: PagerState =
+        rememberPagerState(
+            pageCount = { songListViewModel.songListState.songs.size },
+            initialPage = songListViewModel.songListState.songs.indexOf(song)
+        )
 
+    val coroutineScope: CoroutineScope = rememberCoroutineScope()
 
     Column(
         modifier = modifier
             .background(brush = Brush.verticalGradient(colors = colorList))
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
 
             Spacer(modifier = Modifier.height(60.dp))
 
-            Column(
-                modifier = Modifier
-                    .width(320.dp)
-                    .padding(10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                SongBigCover(coverId = song.cover)
 
-                Spacer(modifier = Modifier.height(60.dp))
-
-                Text(
-                    text = song.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight(700),
-                    fontSize = 22.sp
-                )
-
-                Spacer(modifier = Modifier.height(5.dp))
-
-                Text(
-                    text = song.artist,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SubTextColor
-                )
-            }
-
-
-//            CircularList(
-//                items = songListViewModel.songListState.songs,
-//                currentlyPlayingSong = song,
-//                songListViewModel = songListViewModel
-//            )
-        }
-
-        SongController(viewModel = songListViewModel)
-    }
-
-}
-
-@Composable
-fun CircularList(
-    items: List<Song>,
-    modifier: Modifier = Modifier,
-    currentlyPlayingSong: Song,
-    songListViewModel: SongListViewModel,
-) {
-    val currentlyPlayingSongIndex =
-        songListViewModel.songListState.songs.indexOf(currentlyPlayingSong)
-    val listState = rememberLazyListState(currentlyPlayingSongIndex)
-    var completelyVisibleItem: List<Song>? by remember { mutableStateOf(null) }
-
-
-    LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress }
-            .distinctUntilChanged()
-            .collect { isScrolling ->
-                if (isScrolling) {
-                    val offset = listState.layoutInfo.viewportStartOffset
-                    val layoutInfo = listState.layoutInfo
-                    val firstVisibleItem = layoutInfo.visibleItemsInfo
-                        .firstOrNull { it.offset >= offset }
-                        ?.index
-
-                    val lastVisibleItem = layoutInfo.visibleItemsInfo
-                        .lastOrNull { it.offset + it.size <= offset + layoutInfo.viewportEndOffset }
-                        ?.index
-
-                    completelyVisibleItem =
-                        if (firstVisibleItem != null && lastVisibleItem != null) {
-                            items.subList(firstVisibleItem, lastVisibleItem + 1)
-                        } else {
-                            null
-                        }
-
-                    if (!completelyVisibleItem.isNullOrEmpty()) {
-                        val getSong = completelyVisibleItem!!.first()
-                        if (getSong != currentlyPlayingSong) {
-                            songListViewModel.onPlayerEvents(PlayerEvents.onPlayNewSong(getSong))
-                        }
-                    }
-                    Log.d("song", "visible item - $completelyVisibleItem")
+            HorizontalPager(
+                state = pagerState
+            ) { page ->
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val currentSong = songListViewModel.songListState.songs[page]
+                    SongContent(song = currentSong)
                 }
             }
-    }
 
-    LazyRow(
-        state = listState,
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(25.dp),
-        userScrollEnabled = true
-    ) {
-
-        items(songListViewModel.songListState.songs) { song ->
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 10.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-
-                SongBigCover(coverId = song.cover)
-
-                Spacer(modifier = Modifier.height(60.dp))
-
-                Text(
-                    text = song.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight(700),
-                    fontSize = 22.sp
-                )
-
-                Spacer(modifier = Modifier.height(5.dp))
-
-                Text(
-                    text = song.artist,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = SubTextColor
-                )
+            LaunchedEffect(pagerState) {
+                snapshotFlow { pagerState.currentPage }
+                    .distinctUntilChanged()
+                    .collect { currentPage ->
+                        val currentSong = songListViewModel.songListState.songs[currentPage]
+                        if (currentSong != song) {
+                            songListViewModel.onPlayerEvents(PlayerEvents.onPlayNewSong(currentSong))
+                        }
+                    }
             }
         }
 
-//        items(Int.MAX_VALUE) {
-//            val index = it % items.size
-//
-//            Column(
-//                modifier = Modifier
-//                    .fillMaxWidth(),
-//                horizontalAlignment = Alignment.CenterHorizontally
-//            ) {
-//
-//                SongBigCover(coverId = items[index].cover)
-//
-//                Spacer(modifier = Modifier.height(60.dp))
-//
-//                Text(
-//                    text = items[index].name,
-//                    style = MaterialTheme.typography.bodyLarge,
-//                    fontWeight = FontWeight(700),
-//                    fontSize = 22.sp
-//                )
-//
-//                Spacer(modifier = Modifier.height(5.dp))
-//
-//                Text(
-//                    text = items[index].artist,
-//                    style = MaterialTheme.typography.bodyMedium,
-//                    color = SubTextColor
-//                )
-//            }
-//        }
+        SongController(
+            viewModel = songListViewModel,
+            skipToPreviousSong = {
+                val prevPage = pagerState.currentPage -  1
+                val newPage = if (prevPage > 0) prevPage else  pagerState.pageCount - 1
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(newPage)
+                }
+                songListViewModel.onPlayerEvents(PlayerEvents.onplayPreviousSong)
+            },
+            skipToNextSong = {
+                val nextPage = pagerState.currentPage +  1
+                val newPage = if (nextPage < pagerState.pageCount) nextPage else 0
+                coroutineScope.launch {
+                    pagerState.animateScrollToPage(newPage)
+                }
+                songListViewModel.onPlayerEvents(PlayerEvents.onplayNextSong)
+            })
+    }
+
+}
+
+
+@Composable
+fun SongContent(song: Song) {
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        SongBigCover(coverId = song.cover)
+
+        Spacer(modifier = Modifier.height(60.dp))
+
+        Text(
+            text = song.name,
+            style = MaterialTheme.typography.bodyLarge,
+            fontWeight = FontWeight(700),
+            fontSize = 22.sp
+        )
+
+        Spacer(modifier = Modifier.height(5.dp))
+
+        Text(
+            text = song.artist,
+            style = MaterialTheme.typography.bodyMedium,
+            color = SubTextColor
+        )
     }
 }
+
 
 @Composable
 fun SongController(
     viewModel: SongListViewModel,
+    skipToPreviousSong: () -> Unit,
+    skipToNextSong: () -> Unit,
 ) {
 
     val currentMediaPosition = viewModel.currentMediaPosition.collectAsState()
@@ -312,7 +245,7 @@ fun SongController(
                 .height(20.dp)
                 .align(Alignment.CenterVertically)
                 .clickable {
-                    viewModel.onPlayerEvents(PlayerEvents.onplayPreviousSong)
+                    skipToPreviousSong()
                 })
 
             Spacer(modifier = Modifier.width(45.dp))
@@ -332,7 +265,7 @@ fun SongController(
                 .height(20.dp)
                 .align(Alignment.CenterVertically)
                 .clickable {
-                    viewModel.onPlayerEvents(PlayerEvents.onplayNextSong)
+                    skipToNextSong()
                 })
         }
 
